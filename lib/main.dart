@@ -63,8 +63,26 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final List<Transaction> _userTransactions = [];
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addObserver(this);
+    super.initState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print(state);
+    super.didChangeAppLifecycleState(state);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   // Add new transaction
   void _addNewTransaction(
@@ -124,6 +142,56 @@ class _MyHomePageState extends State<MyHomePage> {
   // Show chart switch value
   bool _showChart = false;
 
+  // Landscape mode builder
+  List<Widget> _builderLandscapeMode(
+    double availableSpace,
+    Container txList,
+  ) {
+    return [
+      // Switch
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Show chart: ',
+            style: Theme.of(context).textTheme.headline6,
+          ),
+          Switch.adaptive(
+            value: _showChart,
+            onChanged: (val) {
+              setState(() {
+                _showChart = val;
+              });
+            },
+          ),
+        ],
+      ),
+      // Chart or list of transactions
+      _showChart
+          ? Container(
+              height: availableSpace * 0.7,
+              child: Chart(_recentTransaction),
+            )
+          : txList,
+    ];
+  }
+
+  // Portrait mode builder
+  List<Widget> _builderPortraitMode(
+    double availableSpace,
+    Container txList,
+  ) {
+    return [
+      // Chart
+      Container(
+        height: availableSpace * 0.3,
+        child: Chart(_recentTransaction),
+      ),
+      // Tx list
+      txList,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     // App bar
@@ -174,48 +242,13 @@ class _MyHomePageState extends State<MyHomePage> {
           //mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            /// For [landscape mode]
+            // For landscape mode
+            if (isLandscape) ..._builderLandscapeMode(availableSpace, txList),
 
-            // Switch
-            if (isLandscape)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Show chart: ',
-                    style: Theme.of(context).textTheme.headline6,
-                  ),
-                  Switch.adaptive(
-                    value: _showChart,
-                    onChanged: (val) {
-                      setState(() {
-                        _showChart = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-
-            // Chart or list of transactions
-            if (isLandscape)
-              _showChart
-                  ? Container(
-                      height: availableSpace * 0.7,
-                      child: Chart(_recentTransaction),
-                    )
-                  : txList,
-
-            /// For [portrait mode]
+            // For portrait mode
 
             // Chart
-            if (!isLandscape)
-              Container(
-                height: availableSpace * 0.3,
-                child: Chart(_recentTransaction),
-              ),
-
-            // Tx list
-            if (!isLandscape) txList,
+            if (!isLandscape) ..._builderPortraitMode(availableSpace, txList),
           ],
         ),
       ),
